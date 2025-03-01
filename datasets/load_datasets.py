@@ -116,7 +116,7 @@ def get_dataset(dataset_dir, dataset_name, task=None):
     molecule_net_dataset_names = [name.lower() for name in MoleculeNet.names.keys()]
 
     if dataset_name.lower() == 'Mutagenicity'.lower():
-        return load_MUTAG(dataset_dir, 'mutagenicity')
+        return load_MUTAG(dataset_dir, 'Mutagenicity')
     elif dataset_name.lower() in sync_dataset_dict.keys():
         sync_dataset_filename = sync_dataset_dict[dataset_name.lower()]
         return load_syn_data(dataset_dir, sync_dataset_filename)
@@ -131,7 +131,7 @@ def get_dataset(dataset_dir, dataset_name, task=None):
 class MUTAGDataset(InMemoryDataset):
     def __init__(self, root, name, transform=None, pre_transform=None):
         self.root = root
-        self.name = name.lower()
+        self.name = name # .lower()
         super(MUTAGDataset, self).__init__(root, transform, pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
 

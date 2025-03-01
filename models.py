@@ -28,34 +28,36 @@ class GCNConv_(GCNConv):
         super(GCNConv_, self).__init__(*args, **kwargs)
 
     def propagate(self, edge_index: Adj, size: Size = None, **kwargs):
-        size = self.__check_input__(edge_index, size)
+        size = self._check_input(edge_index, size)
 
         # Run "fused" message and aggregation (if applicable).
         if (isinstance(edge_index, SparseTensor) and self.fuse
-                and not self.__explain__):
-            coll_dict = self.__collect__(self.__fused_user_args__, edge_index,
+                and not self._explain):
+            coll_dict = self._collect(self._fused_user_args, edge_index,
                                          size, kwargs)
 
-            msg_aggr_kwargs = self.inspector.distribute(
-                'message_and_aggregate', coll_dict)
+            # msg_aggr_kwargs = self.inspector.distribute('message_and_aggregate', coll_dict)
+            msg_aggr_kwargs = self.inspector.collect_param_data('message_and_aggregate', coll_dict)
             out = self.message_and_aggregate(edge_index, **msg_aggr_kwargs)
 
-            update_kwargs = self.inspector.distribute('update', coll_dict)
+            # update_kwargs = self.inspector.distribute('c', coll_dict)
+            update_kwargs = self.inspector.collect_param_data('update_kwargs', coll_dict)
             return self.update(out, **update_kwargs)
 
         # Otherwise, run both functions in separation.
         elif isinstance(edge_index, Tensor) or not self.fuse:
-            coll_dict = self.__collect__(self.__user_args__, edge_index, size,
+            coll_dict = self._collect(self._user_args, edge_index, size,
                                          kwargs)
 
-            msg_kwargs = self.inspector.distribute('message', coll_dict)
+            # msg_kwargs = self.inspector.distribute('message', coll_dict)
+            msg_kwargs = self.inspector.collect_param_data('message', coll_dict)
             out = self.message(**msg_kwargs)
 
             # For `GNNExplainer`, we require a separate message and aggregate
             # procedure since this allows us to inject the `edge_mask` into the
             # message passing computation scheme.
-            if self.__explain__:
-                edge_mask = self.__edge_mask__
+            if self._explain:
+                edge_mask = self._edge_mask
                 # Some ops add self-loops to `edge_index`. We need to do the
                 # same for `edge_mask` (but do not train those).
                 if out.size(self.node_dim) != edge_mask.size(0):
@@ -64,10 +66,12 @@ class GCNConv_(GCNConv):
                 assert out.size(self.node_dim) == edge_mask.size(0)
                 out = out * edge_mask.view([-1] + [1] * (out.dim() - 1))
 
-            aggr_kwargs = self.inspector.distribute('aggregate', coll_dict)
+            # aggr_kwargs = self.inspector.distribute('aggregate', coll_dict)
+            aggr_kwargs = self.inspector.collect_param_data('aggregate', coll_dict)
             out = self.aggregate(out, **aggr_kwargs)
 
-            update_kwargs = self.inspector.distribute('update', coll_dict)
+            # update_kwargs = self.inspector.distribute('update', coll_dict)
+            update_kwargs = self.inspector.collect_param_data('update', coll_dict)
             return self.update(out, **update_kwargs)
 
 

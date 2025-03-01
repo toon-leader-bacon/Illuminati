@@ -46,7 +46,7 @@ if __name__ == '__main__':
     model = GCN(n_feat=dataset.num_node_features,
                 n_hidden=20,
                 n_class=dataset.num_classes,
-                pooling=pooling[dataset_name],
+                pooling=pooling[dataset_name.lower()],
                 loop=loop)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
     loss_fc = nn.CrossEntropyLoss()

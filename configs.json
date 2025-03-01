@@ -1,8 +1,8 @@
 {
   "dataset_name": {
-    "graph": "mutagenicity",
-    "node": "citeseer"},
-
+    "graph": "BBBP",
+    "node": "citeseer"
+  },
   "explainer": {
     "mode": 0,
     "node": 1,

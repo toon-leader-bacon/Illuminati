@@ -14,6 +14,49 @@ from pgmexplainer import PGMExplainer
 from pgexplainer import PGExplainer
 from train_graph import evaluate
 
+########################
+import networkx as nx
+import matplotlib.pyplot as plt
+
+
+def visualize_graph(data, node_labels=None, figsize=(8, 8), node_size=500, font_size=12):
+    """
+    Visualizes a torch_geometric.data.Data object as a graph image.
+
+    Args:
+        data (torch_geometric.data.Data): The graph data object.
+        node_labels (list or torch.Tensor, optional): Labels for the nodes. Defaults to None.
+        figsize (tuple, optional): Figure size. Defaults to (8, 8).
+        node_size (int, optional): Size of the nodes. Defaults to 500.
+        font_size (int, optional): Font size for node labels. Defaults to 12.
+    """
+    G = nx.Graph()
+
+    # Add nodes
+    num_nodes = data.num_nodes
+    G.add_nodes_from(range(num_nodes))
+
+    # Add edges
+    edge_list = data.edge_index.t().tolist()  # Convert edge_index to list of tuples
+    G.add_edges_from(edge_list)
+
+    # Prepare node labels if provided
+    labels = {}
+    if node_labels is not None:
+        if isinstance(node_labels, torch.Tensor):
+            node_labels = node_labels.tolist()
+        for i, label in enumerate(node_labels):
+            labels[i] = label
+
+    # Draw the graph
+    plt.figure(figsize=figsize)
+    pos = nx.spring_layout(G)  # Layout algorithm for node positioning
+    nx.draw(G, pos, with_labels=True, labels=labels, node_size=node_size, font_size=font_size)
+    plt.show()
+
+#######################
+
+
 
 with open("configs.json") as config_file:
     configs = json.load(config_file)
@@ -38,10 +81,14 @@ node = bool(explainer_args.get("node"))
 data_loader = get_dataloader(dataset, batch_size=1, random_split_flag=True,
                              data_split_ratio=[0.8, 0.1, 0.1], seed=2)
 
+for dataset in data_loader['test']:
+  visualize_graph(dataset)
+  break
+
 model = GCN(n_feat=dataset.num_node_features,
             n_hidden=20,
             n_class=dataset.num_classes,
-            pooling=pooling[dataset_name],
+            pooling=pooling[dataset_name.lower()],
             loop=loop)
 loss_fc = nn.CrossEntropyLoss()
 model_file = './src/' + dataset_name + '.pt'

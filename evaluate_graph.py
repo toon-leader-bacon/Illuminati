@@ -36,7 +36,7 @@ data_loader = get_dataloader(dataset, batch_size=1, random_split_flag=True,
 model = GCN(n_feat=dataset.num_node_features,
             n_hidden=20,
             n_class=dataset.num_classes,
-            pooling=pooling[dataset_name],
+            pooling=pooling[dataset_name.lower()],
             loop=loop)
 model_file = './src/' + dataset_name + '.pt'
 model.load(model_file)
