@@ -10,22 +10,30 @@ from torch_geometric.utils import subgraph, k_hop_subgraph
 
 EPS = 1e-15
 
+def sum_agg(mask):
+  return torch.sum(mask)
 
-def agg(mask):
+def max_agg(mask):
+  return torch.max(mask)
+
+def nocab_agg(mask, amp=1.0):
     result = torch.tensor(1.)
     mask = mask.view(-1)
     weight = mask.shape[0]
     zeros = 0
     for m in mask:
-        if m == 0.:
-            zeros += 1
-            continue
-        result *= m
+          if m == 0.:
+              zeros += 1
+              continue
+          result *= (m * amp)
     weight = weight - zeros
     result = torch.pow(result, 1. / weight) if weight != 0 else torch.tensor(0.)
     if weight != 0:
         result = torch.pow(result, (weight + zeros) / weight)
     return result
+
+def agg(mask):
+    return nocab_agg(mask, 1.0)
 
 
 class Explainer(torch.nn.Module):
@@ -225,7 +233,9 @@ class Explainer(torch.nn.Module):
             node_feat_mask = node_feat_mask * x
             for n in range(N):
                 idx = torch.nonzero(x[n])
-                node_feat_msg[n] = agg(node_feat_mask[n, idx])
+                # agg_val = agg(node_feat_mask[n, idx])
+                agg_val = sum_agg(node_feat_mask[n, idx])
+                node_feat_msg[n] = agg_val
             for n in range(N):
                 if self.out_degree[n] > 0 or self.in_degree[n] > 0:
                     out_masks = torch.zeros(1)
@@ -233,13 +243,15 @@ class Explainer(torch.nn.Module):
                         out_masks = edge_mask[self.out_edge_mask[n]]
                     node_mask_out = out_masks * node_feat_msg[n]
                     node_mask_out = self.agg1(node_mask_out)
+                    
                     in_masks = edge_mask[self.self_loop_mask[n]] if self.self_loop_mask is not None else torch.zeros(1)
                     node_mask_in = in_masks * node_feat_msg[n]
                     if self.in_degree[n] > 0:
                         in_nodes = data.edge_index[0, self.in_edge_mask[n]]
                         in_masks = edge_mask[self.in_edge_mask[n]]
-                        if self.self_loop_mask is not None:
-                            in_masks = torch.cat((in_masks.view(-1), edge_mask[self.self_loop_mask[n]].view(-1)))
+                        # if self.self_loop_mask is not None:
+                        #     in_masks = torch.cat((in_masks.view(-1), edge_mask[self.self_loop_mask[n]].view(-1)))
+                        tmp = node_feat_msg[in_nodes]
                         node_mask_in = in_masks * node_feat_msg[in_nodes]
                     node_mask_in = self.agg1(node_mask_in)
 
